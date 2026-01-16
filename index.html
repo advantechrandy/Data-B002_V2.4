@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCCP原理技術說明</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Noto+Sans+TC:wght@300;400;700&display=swap');
+        
+        :root {
+            --industrial-dark: #0f172a;
+            --industrial-gray: #334155;
+            --industrial-blue: #38bdf8;
+            --industrial-border: #475569;
+            --industrial-yellow: #facc15;
+            --industrial-bg-soft: #1e293b;
+        }
+
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            line-height: 1.8;
+            color: #cbd5e1;
+            background-color: var(--industrial-dark);
+            background-image: radial-gradient(var(--industrial-gray) 0.5px, transparent 0.5px);
+            background-size: 30px 30px;
+        }
+
+        .math-block {
+            overflow-x: auto;
+            background: #1e293b;
+            padding: 1.5rem;
+            border-radius: 4px;
+            margin: 1.2rem 0;
+            text-align: center;
+            border: 1px solid var(--industrial-border);
+            font-family: 'JetBrains Mono', monospace;
+            color: #f8fafc;
+        }
+
+        .process-card {
+            border: 1px solid var(--industrial-border);
+            background: #1e293b;
+            padding: 1.5rem;
+            border-radius: 4px;
+            position: relative;
+            transition: all 0.2s;
+        }
+
+        .process-card:hover {
+            border-color: var(--industrial-blue);
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.2);
+        }
+
+        .process-card::after {
+            content: "";
+            position: absolute;
+            top: 0; right: 0;
+            width: 10px; height: 10px;
+            border-top: 2px solid var(--industrial-blue);
+            border-right: 2px solid var(--industrial-blue);
+        }
+
+        section {
+            scroll-margin-top: 2rem;
+            border-bottom: 1px solid #1e293b;
+            padding-bottom: 2rem;
+        }
+
+        h2 {
+            position: relative;
+            display: inline-block;
+        }
+
+        h2::before {
+            content: "";
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: repeating-linear-gradient(90deg, var(--industrial-blue), var(--industrial-blue) 4px, transparent 4px, transparent 8px);
+        }
+
+        table {
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        
+        th, td {
+            border: 1px solid #334155;
+        }
+
+        .img-container {
+            position: relative;
+            border: 1px solid var(--industrial-border);
+            padding: 10px;
+            background: #020617;
+            display: inline-block;
+        }
+
+        .img-container::before {
+            content: "REF_IMG_06_A";
+            position: absolute;
+            top: -12px;
+            left: 10px;
+            background: var(--industrial-dark);
+            padding: 0 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            color: var(--industrial-blue);
+        }
+
+    </style>
+</head>
+<body class="flex flex-col items-center">
+
+    <!-- 主要內容區 -->
+    <main class="w-full p-6 md:p-12 max-w-5xl">
+        <header class="mb-16 border-b border-slate-800 pb-12 relative text-center md:text-left">
+            <div class="absolute -top-4 -left-4 text-[60px] font-black text-slate-800/20 select-none hidden md:block">TECHNICAL</div>
+            <span class="text-sky-400 font-mono tracking-[0.3em] uppercase text-xs">System Analysis / Thermal Eng.</span>
+            <h1 class="text-3xl md:text-5xl font-extrabold text-slate-50 mt-4 mb-6 tracking-tight">MCCP設計原理說明 V2.4</h1>
+            <div class="flex items-center gap-4">
+                <div class="flex-1 h-[1px] bg-slate-800"></div>
+            </div>
+        </header>
+
+        <!-- 01. 技術簡介 -->
+        <section id="intro" class="mb-16">
+            <h2 class="text-2xl font-bold text-sky-400 mb-8 uppercase tracking-widest">01. 技術簡介</h2>
+            <p class="mb-6">
+                隨著人工智慧 (AI)、高性能計算 (HPC) 以及電力電子的功率密度不斷攀升，冷板 (Cold Plate) 微流道技術已成為散熱工程的核心。微流道係指水力直徑在 \(10\,\mu\text{m}\) 至 \(1\,\text{mm}\) 之間的流體通道。
+            </p>
+            <div class="bg-slate-900/50 border border-slate-700 p-6 rounded relative overflow-hidden">
+                <div class="absolute top-0 right-0 p-2 text-[10px] font-mono text-slate-600">SPEC_v1.4</div>
+                <p class="font-bold mb-4 text-slate-200 flex items-center gap-2">
+                    <span class="w-2 h-2 bg-sky-500"></span> 核心優勢矩陣：
+                </p>
+                <ul class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-slate-400">
+                    <li class="p-3 bg-slate-800/40 border border-slate-700"><strong>高熱傳係數</strong><br><span class="text-[10px]">\(h \propto 1/D_h\) 效應顯著</span></li>
+                    <li class="p-3 bg-slate-800/40 border border-slate-700"><strong>高面積密度</strong><br><span class="text-[10px]">單位體積極大化換熱面積</span></li>
+                    <li class="p-3 bg-slate-800/40 border border-slate-700"><strong>溫度均勻性</strong><br><span class="text-[10px]">精確消除局部熱點 (Hotspots)</span></li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- 02. 基礎原理 -->
+        <section id="physics" class="mb-16">
+            <h2 class="text-2xl font-bold text-sky-400 mb-8 uppercase tracking-widest">02. 熱傳與流力基礎原理</h2>
+            <p class="mb-6">微流道散熱的物理機制主要依據牛頓冷卻定律，其換熱強度受流體特性與幾何尺寸共同制約：</p>
+            <div class="math-block">
+                \[ Q = h \cdot A \cdot (T_{\text{wall}} - T_{\text{fluid}}) \]
+            </div>
+            <p class="mb-4">
+                在微觀尺度下，流體通常處於層流狀態。其努塞爾數 (\(Nu\)) 趨於常數，換熱係數 \(h\) 的極限值由以下公式定義：
+            </p>
+            <div class="math-block">
+                \[ h = \frac{Nu \cdot k}{D_h} \]
+            </div>
+        </section>
+
+        <!-- 03. 流阻討論 -->
+        <section id="flow-resistance" class="mb-16">
+            <h2 class="text-2xl font-bold text-sky-400 mb-8 uppercase tracking-widest">03. 流阻深度討論</h2>
+            <p class="mb-6">流阻是限制微流道性能發展的主要瓶頸。在系統層級，流道寬度對壓力降具備極高的敏感度。</p>
+            
+            <h3 class="text-lg font-bold mb-4 text-slate-200 border-b border-slate-800 pb-2">3.1 壓力降與尺寸之敏感度分析</h3>
+            <p class="mb-4">根據 Hagen-Poiseuille 定律，壓力降 \(\Delta P\) 與直徑的四次方成反比：</p>
+            <div class="math-block">
+                \[ \Delta P = \frac{128 \mu L \dot{V}}{\pi D_h^4} \]
+            </div>
+            <div class="bg-amber-900/20 border-l-4 border-amber-500 p-4 my-6 text-sm">
+                <strong class="text-amber-400">CRITICAL DESIGN ALERT:</strong><br>
+                將流道寬度減半雖然能獲得 2 倍的熱傳係數 \(h\)，但流阻會劇增 <span class="text-amber-400 font-bold">16 倍</span>。這要求工程師必須在熱阻與泵浦功耗間進行精確平衡。
+            </div>
+        </section>
+
+        <!-- 04. 設計技術 -->
+        <section id="design" class="mb-16">
+            <h2 class="text-2xl font-bold text-sky-400 mb-8 uppercase tracking-widest">04. 流道設計技術</h2>
+            <p class="mb-8">為了突破傳統層流的換熱瓶頸，以下設計技術為目前產業應用的核心：</p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="process-card">
+                    <h4 class="font-bold text-sky-400 mb-2 font-mono">/歧管結構 (Manifold)</h4>
+                    <p class="text-xs text-slate-400 leading-relaxed">透過垂直分流減少單一流道長度。將長流道拆分為數個並聯微短流道，是降低壓降的最佳解法。</p>
+                </div>
+                <div class="process-card">
+                    <h4 class="font-bold text-sky-400 mb-2 font-mono">/斷續鰭片 (Offset Fin)</h4>
+                    <p class="text-xs text-slate-400 leading-relaxed">利用錯開排列破壞邊界層。週期性重啟熱邊界層，有效解決層流導致的換熱效率衰減問題。</p>
+                </div>
+                <div class="process-card">
+                    <h4 class="font-bold text-sky-400 mb-2 font-mono">/拓撲優化 (Topology)</h4>
+                    <p class="text-xs text-slate-400 leading-relaxed">演算法生成的分叉流路。模擬生物循環系統，在複雜熱負載分布下實現熱點的精確散熱。</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 05. 優化指標 -->
+        <section id="optimization" class="mb-16">
+            <h2 class="text-2xl font-bold text-sky-400 mb-8 uppercase tracking-widest">05. 性能優化指標</h2>
+            <div class="overflow-x-auto border border-slate-700 rounded overflow-hidden">
+                <table class="min-w-full text-sm bg-slate-900/30">
+                    <thead class="bg-slate-800 text-slate-200">
+                        <tr>
+                            <th class="p-4 text-left font-mono">指標 / METRIC</th>
+                            <th class="p-4 text-left">定義與物理意義</th>
+                            <th class="p-4 text-left">優化方向</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-slate-400">
+                        <tr>
+                            <td class="p-4 font-bold text-slate-300">總熱阻 (\(R_{th}\))</td>
+                            <td class="p-4">溫升與功率之比，量測散熱系統的最終效率。</td>
+                            <td class="p-4 text-rose-400">MINIMIZE</td>
+                        </tr>
+                        <tr>
+                            <td class="p-4 font-bold text-slate-300">性能係數 (COP)</td>
+                            <td class="p-4">\(Q / W_{\text{pump}}\)，評估散熱投入與產出的節能比。</td>
+                            <td class="p-4 text-emerald-400">MAXIMIZE</td>
+                        </tr>
+                        <tr>
+                            <td class="p-4 font-bold text-slate-300">熱增強因子 (PEC)</td>
+                            <td class="p-4">綜合 Nu 數與摩擦係數增加的技術效率指標。</td>
+                            <td class="p-4 text-sky-400">OPTIMIZE</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 06. 製造工藝 -->
+        <section id="manufacturing" class="mb-16 text-center md:text-left">
+            <h2 class="text-2xl font-bold text-sky-400 mb-8 uppercase tracking-widest">06. 製造工藝與實物</h2>
+            
+            <p class="mb-8 mt-4 text-slate-400 max-w-3xl mx-auto md:mx-0">
+                微流道冷板的製造需要跨領域的精密加工技術，從微米級的通道生成到無焊料的結構封裝，每一步工藝皆影響最終的熱阻表現與結構可靠性。
+            </p>
+
+            <!-- 參考圖面 -->
+            <div class="mb-10 text-center">
+                <div class="img-container shadow-2xl">
+                    <img src="https://www.k-media.com.tw/wp-content/uploads/2025/11/illousrate-28.webp" 
+                         alt="[微流道參考圖面]" 
+                         class="max-w-full h-auto md:max-w-xl opacity-90 hover:opacity-100 transition-opacity duration-500">
+                    <div class="mt-2 text-left font-mono text-[10px] text-slate-500 uppercase tracking-tighter">
+                        Fig 6.1: Microfluidics Liquid Cooling Architecture Reference
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 text-left">
+                <div class="process-card">
+                    <div class="absolute -top-3 left-4 bg-slate-900 px-2 text-[10px] font-mono text-sky-500">METHOD_01</div>
+                    <h3 class="text-lg font-bold text-slate-100 mb-3 border-b border-slate-700 pb-2">化學蝕刻 / PCM</h3>
+                    <p class="text-sm text-slate-400">利用光阻與酸液進行非機械式移除。適合超薄疊層結構，能處理極其複雜的二維平面流道設計。</p>
+                </div>
+                <div class="process-card">
+                    <div class="absolute -top-3 left-4 bg-slate-900 px-2 text-[10px] font-mono text-sky-500">METHOD_02</div>
+                    <h3 class="text-lg font-bold text-slate-100 mb-3 border-b border-slate-700 pb-2">精密 CNC / Micro-Milling</h3>
+                    <p class="text-sm text-slate-400">高轉速主軸配合微徑刀具（\(0.1\,\text{mm}\) 以下）。優點是能處理三維複雜底部形狀，但刀具成本昂貴。</p>
+                </div>
+                <div class="process-card md:col-span-2">
+                    <div class="absolute -top-3 left-4 bg-slate-900 px-2 text-[10px] font-mono text-sky-500">CORE_ASSEMBLY</div>
+                    <h3 class="text-lg font-bold text-slate-100 mb-3 border-b border-slate-700 pb-2 font-mono uppercase tracking-wider">擴散焊 (Diffusion Bonding)</h3>
+                    <div class="flex flex-col md:flex-row gap-8">
+                        <p class="flex-1 text-sm text-slate-400 leading-relaxed">
+                            這是在微流道冷板製造中最具技術門檻的步驟。透過在真空爐中加熱至材料熔點的 70-80% 並施加壓力，使兩片銅材在原子層級進行融合。
+                        </p>
+                        <ul class="flex-1 text-xs text-sky-400 space-y-2 border-l border-slate-700 pl-4 font-mono">
+                            <li class="flex items-center gap-2"><span class="w-1 h-1 bg-sky-500"></span> NO SOLDER REQUIRED (無焊料)</li>
+                            <li class="flex items-center gap-2"><span class="w-1 h-1 bg-sky-500"></span> HIGH JOINT STRENGTH (高強度)</li>
+                            <li class="flex items-center gap-2"><span class="w-1 h-1 bg-sky-500"></span> ZERO CHANNEL CLOGGING (零堵塞)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 07. 結論 -->
+        <footer id="summary" class="bg-slate-950 border border-slate-800 p-8 md:p-12 rounded mt-20 relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-32 h-32 bg-sky-500/5 blur-3xl rounded-full"></div>
+            <h2 class="text-2xl font-bold mb-6 text-sky-400 !before:hidden">07. 結論與展望</h2>
+            <p class="text-slate-400 mb-10 max-w-3xl">
+                目前的 AI 伺服器市場，液冷散熱已經開始成為主流。Nvidia 的 B300 晶片 TDP 已達 1,400W ，這已經逼近氣冷散熱的極限。然而，這只是前菜。預計於 2026 年登場的 Vera Rubin 架構，其單顆晶片功耗將上看 2,300W 。隨著 TDP 的指數級攀升，傳統氣冷散熱將正式退位，取而代之的是一種名為「微通道水冷板 (MCCP)」的精密技術 。
+            </p>
+            <div class="flex flex-col md:flex-row justify-between items-end gap-6">
+                <div class="font-mono text-[10px] text-slate-600">
+                    <p>ENGINEERING DOCUMENT: CP-SR-2026-X</p>
+                    <p>AUTHOR: RANDY CHEN</p>
+                    <p>STATUS: FINAL RELEASE (V2.4)</p>
+                </div>
+            </div>
+        </footer>
+    </main>
+
+    <!-- 回到頂部按鈕 -->
+    <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="fixed bottom-8 right-8 w-12 h-12 bg-sky-600/20 backdrop-blur-md border border-sky-500 text-sky-500 flex items-center justify-center rounded hover:bg-sky-500 hover:text-white transition-all z-50">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+        </svg>
+    </button>
+
+    <script>
+        // 監聽 contextmenu 事件並靜默攔截 (不顯示提示)
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+        }, false);
+    </script>
+
+</body>
+</html>
